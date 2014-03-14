@@ -12,7 +12,9 @@
 ## Configuration:
 
 all configs in haproxy.json
+
    ProxyList:
+
       Proxy:
 
       Src:source ip or domain.
