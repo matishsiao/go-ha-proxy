@@ -1,11 +1,16 @@
 Introduction:
+
   This GoHAProxy is simple HAProxy by Golang.
+
   It's support tcp proxy and you can use roundrobin or source mode to HA.
   
 
 Install:
+
   go get github.com/matishsiao/GoHAProxy
+
   go test
+
   go build
 
 Configuration:
