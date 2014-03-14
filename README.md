@@ -9,11 +9,11 @@
   go build
 ```
 
-## Configuration:
+## Configuration format:
 
-all configs in haproxy.json
+configs in haproxy.json
 
-   ProxyList:
+ProxyList:
 
       Proxy:
 
@@ -42,6 +42,80 @@ all configs in haproxy.json
          Weight:not use(when Weight HA mode done,will use this arg)
 
          Check:true or false(check node server health.If you set false,the GoHAProxy will set this server allways health.)
+
+## Configuration example:
+		{"Configs": 
+		    {       
+		       "ProxyList":
+		       [
+		               {
+		                       "Src": "",
+		                       "SrcPort": "9000",
+		                       "Mode":"tcp",
+		                       "Type":"RoundRobin",
+		                       "KeepAlive":60,
+		                       "CheckTime":1,                       
+		                       "DstList": 
+		                       [
+			                       {
+			                       	 "Name":"MatisVM",
+			                         "Dst":"10.7.9.59",
+			                         "DstPort": "80",
+			                         "Weight":1,
+			                         "Check":true
+			                       },
+			                       {
+			                         "Name":"Outsite",
+			                         "Dst":"www.yahoo.com",
+			                         "DstPort": "80",
+			                         "Weight":2,
+			                         "Check":true
+			                       },
+			                       {
+			                       	 "Name":"DemoVM",
+			                         "Dst":"10.7.9.53",
+			                         "DstPort": "80",
+			                         "Weight":3,
+			                         "Check":true
+			                       }
+		                       ]
+		               },
+		               {
+		                       "Src": "",
+		                       "SrcPort": "9001",
+		                       "Mode":"tcp",
+		                       "Type":"Source",
+		                       "KeepAlive":60,
+		                       "CheckTime":1,                       
+		                       "DstList": 
+		                       [
+			                       {
+			                       	 "Name":"MatisVM",
+			                         "Dst":"10.7.9.59",
+			                         "DstPort": "80",
+			                         "Weight":1,
+			                         "Check":true
+			                       },
+			                       {
+			                         "Name":"Outsite",
+			                         "Dst":"www.yahoo.com",
+			                         "DstPort": "80",
+			                         "Weight":2,
+			                         "Check":true
+			                       },
+			                       {
+			                       	 "Name":"DemoVM",
+			                         "Dst":"10.7.9.53",
+			                         "DstPort": "80",
+			                         "Weight":3,
+			                         "Check":true
+			                       }
+		                       ]
+		               }
+		       ]
+		    }
+		}
+
 
 ##License and Copyright
 This software is Copyright 2012-2014 Matis Hsiao.
