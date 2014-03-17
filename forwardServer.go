@@ -266,8 +266,8 @@ func (fs *ForwardServer) Listen(srvProxy Proxy) {
 	if fs.srvProxy.CheckTime == 0 {
 		fs.srvProxy.CheckTime = 5
 	}
+	fs.srvProxy.DstLen = len(fs.srvProxy.DstList)
 	if fs.srvProxy.Mode == "tcp" || fs.srvProxy.Mode == "http" || fs.srvProxy.Mode == "health" {
-		fs.srvProxy.DstLen = len(fs.srvProxy.DstList)
 		switch fs.srvProxy.Mode {
 		case "health":
 			go fs.Check()

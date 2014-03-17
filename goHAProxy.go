@@ -39,21 +39,19 @@ func main() {
 	}
 
 	fmt.Printf("GoHAProxy FileName:%s\n", *configInfo.FileName)
-
-	haConfig := loadConfigs()
-
-	for _, proxy := range haConfig.Configs.ProxyList {
-		FS := new(ForwardServer)
-		proxyServer.ServerList = append(proxyServer.ServerList, FS)
-		//proxyServer.ServerList[k] = FS
-		go FS.Listen(proxy)
+	
+	ok,haConfig := loadConfigs()
+	if ok {			
+		for _, proxy := range haConfig.Configs.ProxyList {
+			FS := new(ForwardServer)
+			proxyServer.ServerList = append(proxyServer.ServerList, FS)
+			//proxyServer.ServerList[k] = FS
+			go FS.Listen(proxy)
+		}	
 	}
-
+	
 	go Monitor()
 	for {
-		/*for k,proxy := range proxyServer.ServerList {
-			fmt.Printf("Proxy[%v]: %v\n", k,proxy.srvProxy)
-		}*/
 		configWatcher()
 		time.Sleep(500 * time.Millisecond)
 	}
@@ -77,58 +75,57 @@ func configWatcher() {
 		fmt.Printf("Config changed.Reolad.\n")
 		configInfo.Size = info.Size()
 		configInfo.ModTime = info.ModTime()
-		haConfig := loadConfigs()
-		lastkey := 0
-		//檢查有沒有移除掉的設定有的話就移除
-		for k, sProxy := range proxyServer.ServerList {
-			oldProxy := true
-			for _, proxy := range haConfig.Configs.ProxyList {
-				if *configInfo.Debug {
-					fmt.Printf("Delete PName:%s srvProxyName:%s \n", proxy.Name, sProxy.srvProxy.Name)
-				}
-				if proxy.Name == sProxy.srvProxy.Name {
-					oldProxy = false
-					break
-				}
-			}
-			if k > lastkey {
-				lastkey = k
-			}
-			if oldProxy {
-				if *configInfo.Debug {
-					fmt.Printf("Delete Proxy[%v]: %v\n", k, sProxy.srvProxy.Name)
-				}
-				sProxy.Stop()
-				//proxyServer.ServerList = append(proxyServer.ServerList[:k], proxyServer.ServerList[k+1:])
-				proxyServer.ServerList = proxyServer.ServerList[:k+copy(proxyServer.ServerList[k:], proxyServer.ServerList[k+1:])]
-				//proxyServer.ServerList = copy(proxyServer.ServerList[k:], proxyServer.ServerList[k+1:])
-
-				//delete(proxyServer.ServerList, k)
-				//time.Sleep(1 * time.Second)
-			}
-		}
-
-		//檢查有沒有新的設定
-		for _, proxy := range haConfig.Configs.ProxyList {
-			newProxy := true
+		ok,haConfig := loadConfigs()
+		if ok {			
+			//檢查有沒有移除掉的設定有的話就移除
 			for k, sProxy := range proxyServer.ServerList {
-				if *configInfo.Debug {
-					fmt.Printf("Check Add PName[%d]:%s srvProxyName:%s \n", k, proxy.Name, sProxy.srvProxy.Name)
+				oldProxy := true
+				for _, proxy := range haConfig.Configs.ProxyList {
+					if *configInfo.Debug {
+						fmt.Printf("Delete PName:%s srvProxyName:%s \n", proxy.Name, sProxy.srvProxy.Name)
+					}
+					if proxy.Name == sProxy.srvProxy.Name {
+						oldProxy = false
+						break
+					}
 				}
-				if proxy.Name == sProxy.srvProxy.Name {
-					proxyServer.ServerList[k].Reload(proxy)
-					newProxy = false
-					break
+			
+				if oldProxy {
+					if *configInfo.Debug {
+						fmt.Printf("Delete Proxy[%v]: %v\n", k, sProxy.srvProxy.Name)
+					}
+					sProxy.Stop()
+					//proxyServer.ServerList = append(proxyServer.ServerList[:k], proxyServer.ServerList[k+1:])
+					proxyServer.ServerList = proxyServer.ServerList[:k+copy(proxyServer.ServerList[k:], proxyServer.ServerList[k+1:])]
+					//proxyServer.ServerList = copy(proxyServer.ServerList[k:], proxyServer.ServerList[k+1:])
+	
+					//delete(proxyServer.ServerList, k)
+					//time.Sleep(1 * time.Second)
 				}
 			}
-			if newProxy {
-				FS := new(ForwardServer)
-				proxyServer.ServerList = append(proxyServer.ServerList, FS)
-				//proxyServer.ServerList[lastkey+1] = FS
-				if *configInfo.Debug {
-					fmt.Printf("Add New Proxy: %v\n", proxy)
+	
+			//檢查有沒有新的設定
+			for _, proxy := range haConfig.Configs.ProxyList {
+				newProxy := true
+				for k, sProxy := range proxyServer.ServerList {
+					if *configInfo.Debug {
+						fmt.Printf("Check Add PName[%d]:%s srvProxyName:%s \n", k, proxy.Name, sProxy.srvProxy.Name)
+					}
+					if proxy.Name == sProxy.srvProxy.Name {
+						proxyServer.ServerList[k].Reload(proxy)
+						newProxy = false
+						break
+					}
 				}
-				go FS.Listen(proxy)
+				if newProxy {
+					FS := new(ForwardServer)
+					proxyServer.ServerList = append(proxyServer.ServerList, FS)
+					//proxyServer.ServerList[lastkey+1] = FS
+					if *configInfo.Debug {
+						fmt.Printf("Add New Proxy: %v\n", proxy)
+					}
+					go FS.Listen(proxy)
+				}
 			}
 		}
 
@@ -136,13 +133,17 @@ func configWatcher() {
 	defer file.Close()
 }
 
-func loadConfigs() HAConfig {
+func loadConfigs() (bool,HAConfig) {
 	file, e := ioutil.ReadFile(*configInfo.FileName)
 	if e != nil {
 		fmt.Printf("Load GoHAProxy config error: %v\n", e)
 		os.Exit(1)
 	}
 	var haConfig HAConfig
-	json.Unmarshal(file, &haConfig)
-	return haConfig
+	err := json.Unmarshal(file, &haConfig)
+	if err != nil {
+		fmt.Printf("Config load error:%v \n",err)
+		return false,haConfig
+	}
+	return true,haConfig
 }

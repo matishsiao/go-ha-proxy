@@ -40,7 +40,7 @@
                        "SrcPort": "9001",
                        "Mode":"tcp",
                        "Type":"Source",
-                       "KeepAlive":60,
+                       "KeepAlive":5,
                        "CheckTime":1,                       
                        "DstList": 
                        [
@@ -63,6 +63,38 @@
 	                         "Dst":"10.7.9.53",
 	                         "DstPort": "80",
 	                         "Weight":3,
+	                         "Check":true
+	                       }
+                       ]
+               },
+               {
+               				 "Name":"HealthTest",
+                       "Src": "",
+                       "SrcPort": "9003",
+                       "Mode":"tcp",
+                       "Type":"Health",                       
+                       "CheckTime":1,                       
+                       "DstList": 
+                       [ 
+	                       {
+	                       	 "Name":"MatisVM",
+	                         "Dst":"10.7.9.59",
+	                         "DstPort": "80",
+	                         "Weight":1,
+	                         "Check":true
+	                       },
+	                       {
+	                         "Name":"Outsite",
+	                         "Dst":"www.sbiec.com",
+	                         "DstPort": "80",
+	                         "Weight":2,
+	                         "Check":true
+	                       },
+	                       {
+	                       	 "Name":"DemoVM",
+	                         "Dst":"10.7.9.53",
+	                         "DstPort": "80",
+	                         "Weight":2, 
 	                         "Check":true
 	                       }
                        ]

@@ -61,7 +61,11 @@
 						{{$proxy.Name}}
 					</td>
 					<td>
-						{{$proxy.SrcPort}}
+						{{if eq $proxy.Mode "health"}}												
+							N/A
+						{{else}}
+							{{$proxy.SrcPort}}
+						{{end}}
 					</td>
 					<td>
 						{{$proxy.Mode}}
