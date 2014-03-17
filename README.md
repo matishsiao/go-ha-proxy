@@ -29,7 +29,7 @@ version:0.0.2
 
 ## Configuration format:
 
-configs in haproxy.json
+configs in config.json
 
 ProxyList:
 
