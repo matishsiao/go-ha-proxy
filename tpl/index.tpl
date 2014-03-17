@@ -28,7 +28,7 @@
 		timeId = setInterval("checkData()",1000);
 		function checkData(){
 			var time = new Date();
-			if(time.getSeconds() == 0){
+			if(time.getSeconds() % 30 == 0){
 				clearInterval(timeId);
 				document.location.reload();
 			}
@@ -47,6 +47,7 @@
 				<th>Mode</th>
 				<th>Type</th>								
 				<th>Counter</th>
+				<th>Connection</th>
 				<th>Destination Address</th> 
 				<th>Health</th>
 			</tr>
@@ -70,6 +71,9 @@
 					</td>
 					<td>
 						{{$dst.Counter}}
+					</td>
+					<td>
+						{{$dst.Connections}}
 					</td>
 					<td>
 						{{$dst.Dst}}:{{$dst.DstPort}}

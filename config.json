@@ -7,8 +7,7 @@
                        "Src": "",
                        "SrcPort": "9000",
                        "Mode":"tcp",
-                       "Type":"RoundRobin",
-                       "KeepAlive":80,
+                       "Type":"Source",                       
                        "CheckTime":1,                       
                        "DstList": 
                        [ 
