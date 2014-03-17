@@ -39,13 +39,13 @@ ProxyList:
 
       SrcPort:source port.
 
-      Mode:tcp (http and health will add in next version.)
+      Mode:tcp,health
 
-      Type:RoundRobin,Source(Weight will add in next version.)
+      Type:RoundRobin,Source (Weight will add in next version.)
    
-      KeepAlive:1 second (keep alive server connection.)
+      KeepAlive:1 second (keep alive server connection.Set zero will allways keep alive.)
 
-      CheckTime:1 second (check health,default 5 seconds.)
+      CheckTime:1 second (check health,default value:5 seconds.)
 
       DstList:Destination server list
       
