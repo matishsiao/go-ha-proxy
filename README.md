@@ -6,10 +6,15 @@
 version:0.0.2
 
 1.support tcp proxy and you can use roundrobin or source mode to HA.
+
 2.health mode supported.
+
 3.monitor server supported.
+
      http://localip:8080
+     
 4.command line params supported.
+
      ./GoHAProxy -help
 
   
