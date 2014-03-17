@@ -17,6 +17,8 @@ version:0.0.2
 
      ./GoHAProxy -help
 
+5.auto reload config file.When file changed.GoHAProxy will auto reloaded.
+
   
 ## Install:
 ```sh
