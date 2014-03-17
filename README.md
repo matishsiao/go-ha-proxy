@@ -3,16 +3,16 @@
   
 ## Version:
 
-version:0.0.1
+version:0.0.2
 
-    support tcp proxy and you can use roundrobin or source mode to HA.
+1.support tcp proxy and you can use roundrobin or source mode to HA.
+2.health mode supported.
+3.monitor server supported.
+     http://localip:8080
+4.command line params supported.
+     ./GoHAProxy -help
+
   
-## Next version:
-
-1. Weight HA mode supported
-2. health mode supported
-3. monitor server supported
-
 ## Install:
 ```sh
   go get github.com/matishsiao/GoHAProxy
