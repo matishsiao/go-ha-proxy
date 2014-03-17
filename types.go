@@ -1,7 +1,28 @@
 package main
 
 import (
+	"time"
 )
+
+type ConfigInfo struct {
+	FileName *string
+	Size int64
+	ModTime time.Time
+	Debug *bool
+	Version *bool
+}
+
+
+type ProxyServer struct {
+	ServerList []*ForwardServer
+}
+
+type HtmlData struct {
+	Title     string	
+	Data      map[string]string
+	ProxyStatus  []Proxy
+}
+
 
 type HAConfig struct {
 	Configs  Config	
@@ -12,6 +33,7 @@ type Config struct {
 }
 
 type Proxy struct {
+	Name string
 	Src string
 	SrcPort string
 	Mode string
@@ -31,6 +53,7 @@ type DstConfig struct {
 	Weight int
 	Check bool
 	Health bool
+	Counter int
 }
 
 func (p *Proxy) GetSrcAddr() string {

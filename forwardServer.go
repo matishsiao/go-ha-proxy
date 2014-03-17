@@ -4,7 +4,6 @@ package main
 	    "net"
 	    "fmt"    
 	    "io"
-	    "log"
 	    "time"
 	    "container/list"
 	    "strings"
@@ -13,11 +12,13 @@ package main
 	
 	
 	var (
-		count int = 0		
+		count int = 0			
 	)
 	type ForwardServer struct {
 		ClientList *list.List	
 		srvProxy Proxy
+		localListener net.Listener
+		Run bool	
 	}
 	
 	type Client struct {
@@ -123,7 +124,9 @@ package main
 		    go func() {
 			   _, err := io.Copy(srvConn, localConn)
 			   if err != nil {
-			        fmt.Printf("io.Copy S2L failed: %v\n", err)
+			   		if *configInfo.Debug {
+			        	fmt.Printf("io.Copy S2L failed: %v\n", err)
+			        }
 					srvConn.Close()
 			        localConn.Close()
 			        return
@@ -134,10 +137,12 @@ package main
 			go func() {
 			   _, err := io.Copy(localConn, srvConn)				   
 			   if err != nil {
-			       fmt.Printf("io.Copy L2S failed: %v\n", err)
-			       srvConn.Close()
-			       localConn.Close()
-			       return
+			   		if *configInfo.Debug {
+			       		fmt.Printf("io.Copy L2S failed: %v\n", err)
+			       	}
+			        srvConn.Close()
+			        localConn.Close()
+			        return
 			   }
 			}()
 			//defer srvConn.Close()
@@ -147,9 +152,10 @@ package main
 	
 	
 	func (fs *ForwardServer) Check()  {
-		for {			
+		for fs.Run {
+			//fmt.Printf("FS Check:%s\n",fs.srvProxy.Name)
 			for k, dstObj := range fs.srvProxy.DstList {	
-				
+					
 				if dstObj.Check {		
 					fs.srvProxy.DstList[k].Health,_ = fs.CheckHealth(fs.srvProxy.Mode,fs.srvProxy.GetDstAddr(k))					
 				} else {
@@ -158,6 +164,7 @@ package main
 				//fmt.Printf("Check Mode:%s DstAddr:%s Health:%v SrvHealth:%v\n",fs.srvProxy.Mode,fs.srvProxy.GetDstAddr(k),dstObj.Health,fs.srvProxy.DstList[k].Health)
 			} 
 			time.Sleep(time.Duration(fs.srvProxy.CheckTime) * time.Second)
+			
 		}
 	}
 	
@@ -199,9 +206,11 @@ package main
 	func (fs *ForwardServer) TurnToNode(localConn net.Conn) {
 			
 		switch fs.srvProxy.Type {
+			case "LeastConn":
+		
 			case "Weight":	        				        		
 			       		
-			break
+
 			case "Source":
 				client := fs.GetClient(localConn.RemoteAddr().String())
 				if client == nil {
@@ -214,25 +223,47 @@ package main
 				} else {
 					client.DstIndex = fs.GetHealthNode(client.DstIndex)
 				}
-				fmt.Printf("DstAddr:%s Remote:%s DstIndex:%d Client:%v\n",fs.srvProxy.GetDstAddr(client.DstIndex),localConn.RemoteAddr().String(),client.DstIndex,client)
+				fs.srvProxy.DstList[client.DstIndex].Counter++
+				if *configInfo.Debug {
+					fmt.Printf("DstAddr:%s Remote:%s DstIndex:%d Client:%v\n",fs.srvProxy.GetDstAddr(client.DstIndex),localConn.RemoteAddr().String(),client.DstIndex,client)
+				}
 				go fs.Forward(localConn,fs.srvProxy.GetDstAddr(client.DstIndex))
-			break
 			case "RoundRobin":
 				fs.srvProxy.Index = fs.srvProxy.Counter % fs.srvProxy.DstLen
 				fs.srvProxy.Counter++
 				DstIndex := fs.GetHealthNode(fs.srvProxy.Index)
-				fmt.Printf("DstAddr:%s Remote:%s\n",fs.srvProxy.GetDstAddr(DstIndex),localConn.RemoteAddr().String())		        		
-				go fs.Forward(localConn,fs.srvProxy.GetDstAddr(DstIndex))
-			break
+				fs.srvProxy.DstList[DstIndex].Counter++
+				if *configInfo.Debug {
+					fmt.Printf("DstAddr:%s Remote:%s\n",fs.srvProxy.GetDstAddr(DstIndex),localConn.RemoteAddr().String())
+				}		        		
+				go fs.Forward(localConn,fs.srvProxy.GetDstAddr(DstIndex))			
 		}
 	}
 	
 	
-	func (fs *ForwardServer) Listen(srvProxy Proxy)  {		
-		fmt.Printf("forwardServer connType:%s serverAddr:%s Type:%s\n",srvProxy.Mode,srvProxy.GetSrcAddr(),srvProxy.Type)
+	func (fs *ForwardServer) Reload(srvProxy Proxy) {
+		fs.srvProxy = srvProxy
+		fmt.Printf("FS:%s reloaded.\n",fs.srvProxy.Name)
+		
+	}
+	
+	
+	func (fs *ForwardServer) Stop() {
+		fs.Run = false
+		if fs.localListener != nil {
+			fs.localListener.Close()
+		}
+		//fmt.Printf("FS:%s ready to stop.%v\n",fs.srvProxy.Name,fs.Run)
+	}
+	
+	func (fs *ForwardServer) Listen(srvProxy Proxy)  {	
+		if *configInfo.Debug {	
+			fmt.Printf("forwardServer connType:%s serverAddr:%s Type:%s\n",srvProxy.Mode,srvProxy.GetSrcAddr(),srvProxy.Type)
+		}
 		//已經使用var 宣告則物件已建立,不需要再用new
 		//FS := new(ForwardServer)
 		fs.ClientList = list.New()
+		fs.Run = true
 		fs.srvProxy = srvProxy
 		fs.srvProxy.Counter = 0
 		if fs.srvProxy.CheckTime == 0 {
@@ -240,30 +271,44 @@ package main
 		}
 		if fs.srvProxy.Mode == "tcp" || fs.srvProxy.Mode == "http" || fs.srvProxy.Mode == "health" {
 			fs.srvProxy.DstLen = len(fs.srvProxy.DstList)
-		    localListener, err := net.Listen(fs.srvProxy.Mode, fs.srvProxy.GetSrcAddr())
-		    if err != nil {
-		        log.Fatalf("net.Listen failed: %v", err)
-		    }
-		    fmt.Printf("Counter:%d\n",fs.srvProxy.Counter)		  
-		    
-		    //確認是否要檢查遠端主機
-		    for _, dstObj := range fs.srvProxy.DstList {	
-		    	if dstObj.Check {
-		    		go fs.Check()	    		
-		    		break
-		    	}
+			switch fs.srvProxy.Mode {
+				case "health":
+					go fs.Check()					    
+				default:
+					localListener, err := net.Listen("tcp", fs.srvProxy.GetSrcAddr())
+					fs.localListener = localListener
+				    if err != nil {
+				    	if *configInfo.Debug {
+				        	fmt.Printf("net.Listen failed: %v\n", err)
+				        }
+				        return
+				    }
+				    
+				    //確認是否要檢查遠端主機
+				    for _, dstObj := range fs.srvProxy.DstList {	
+				    	if dstObj.Check {
+				    		go fs.Check()	    		
+				    		break
+				    	}
+					} 
+				     		
+				    //監聽Port 		    
+			    	for {
+					    // Setup localConn (type net.Conn)
+					    localConn, err := fs.localListener.Accept()
+					    if err != nil {
+					    	if *configInfo.Debug {
+					       		fmt.Printf("listen.Accept failed: %v\n", err)
+					       	}
+					    	break
+					    }
+					    
+					    fs.TurnToNode(localConn)  
+				    }
+				    
+				    fmt.Printf("FS:%s is stoped.\n",fs.srvProxy.Name)
 			} 
-		     		
-		    //監聽Port 		    
-	    	for {
-		        // Setup localConn (type net.Conn)
-		        localConn, err := localListener.Accept()
-		        if err != nil {
-		            log.Fatalf("listen.Accept failed: %v", err)
-		        }
-		        fmt.Printf("srvProxy Counter:%d \n",fs.srvProxy.Counter)
-		        fs.TurnToNode(localConn)
-		    }
+		    
 		} else {
 			fmt.Printf("Unsupport mode:%s,listen failed.\n",fs.srvProxy.Mode)
 		}
