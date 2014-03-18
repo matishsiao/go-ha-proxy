@@ -11,13 +11,23 @@ version:0.0.2
 
 3.monitor server supported.
 
-     http://localip:8080
+    http://localip:8080
      
 4.command line params supported.
 
-     ./GoHAProxy -help
+    ./GoHAProxy -help
 
 5.auto reload config file.When file changed.GoHAProxy will auto reloaded.
+
+6.balance type:RoundRobin,Source,Weight,LeastConn
+
+    RoundRobin:auto RR
+    
+    Source:use source ip to balance service.
+    
+    Weight:Use weight setting to balance.
+    
+    LeastConn:Search least conn server to balance server.
 
   
 ## Install:
@@ -41,7 +51,7 @@ ProxyList:
 
       Mode:tcp,health
 
-      Type:RoundRobin,Source (Weight will add in next version.)
+      Type:RoundRobin,Source,Weight,LeastConn
    
       KeepAlive:1 second (keep alive server connection.Set zero will allways keep alive.)
 
