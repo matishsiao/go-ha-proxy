@@ -9,9 +9,6 @@ import (
 	"time"
 )
 
-var (
-	count int = 0
-)
 
 type ForwardServer struct {
 	ClientList    *list.List
@@ -27,7 +24,7 @@ type Client struct {
 }
 
 func (fs *ForwardServer) CheckHealth(connType string, uri string) (bool, int) {
-	//fmt.Printf("checkHealth:Type:%s Addr:%s\n",connType,uri)
+	
 	conn, err := net.Dial(connType, uri)
 	errCode := 0
 
@@ -83,8 +80,7 @@ func (fs *ForwardServer) GetClientElement(RemoteAddrs string) *list.Element {
 	return nil
 }
 
-func (fs *ForwardServer) GetClient(RemoteAddrs string) *Client {
-	//RemoteAddrs := _RemoteAddr
+func (fs *ForwardServer) GetClient(RemoteAddrs string) *Client {	
 	RemoteAddr, _ := GetRemoteAddrInfo(RemoteAddrs)
 
 	for e := fs.ClientList.Front(); e != nil; e = e.Next() {
@@ -103,18 +99,18 @@ func GetRemoteAddrInfo(RemoteAddrs string) (string, string) {
 }
 
 func (fs *ForwardServer) Forward(localConn net.Conn, index int) {
-	// Setup server Conn
-	count++
+	// Setup server Conn	
 	srvConn, err := net.Dial(fs.srvProxy.Mode, fs.srvProxy.GetDstAddr(index))
 	if err != nil {
 		fmt.Printf("forward Err: %v\n", err)
 		return
 	}
 	fs.srvProxy.DstList[index].Connections++
-	//fmt.Printf("connType:%s serverAddr:%s fowarding[%d] \n",connType,serverAddrString,count)
+	
 	// Copy localConn.Reader to sshConn.Writer
 	fs.CheckTimeout(localConn)
 	fs.CheckTimeout(srvConn)
+	
 	if srvConn != nil {
 		go func() {
 			_, err := io.Copy(srvConn, localConn)
@@ -147,10 +143,8 @@ func (fs *ForwardServer) Forward(localConn net.Conn, index int) {
 				localConn.Close()
 				return
 			}
-		}()
-		//defer srvConn.Close()
-	}
-	//defer localConn.Close()
+		}()	
+	}	
 }
 
 func (fs *ForwardServer) Check() {
@@ -161,8 +155,7 @@ func (fs *ForwardServer) Check() {
 				fs.srvProxy.DstList[k].Health, _ = fs.CheckHealth("tcp", fs.srvProxy.GetDstAddr(k))
 			} else {
 				fs.srvProxy.DstList[k].Health = true
-			}
-			//fmt.Printf("Check Mode:%s DstAddr:%s Health:%v SrvHealth:%v\n",fs.srvProxy.Mode,fs.srvProxy.GetDstAddr(k),dstObj.Health,fs.srvProxy.DstList[k].Health)
+			}			
 		}
 		time.Sleep(time.Duration(fs.srvProxy.CheckTime) * time.Second)
 
@@ -206,9 +199,53 @@ func (fs *ForwardServer) TurnToNode(localConn net.Conn) {
 
 	switch fs.srvProxy.Type {
 	case "LeastConn":
-
+		DstIndex := 0
+		
+		for k,Dst := range fs.srvProxy.DstList {
+	    	if fs.srvProxy.DstList[DstIndex].Connections > Dst.Connections {
+	    		DstIndex = k
+	    	}	
+		}
+	    
+	    DstIndex = fs.GetHealthNode(DstIndex)
+		fs.srvProxy.DstList[DstIndex].Counter++
+		if *configInfo.Debug {
+			fmt.Printf("DstAddr:%s Remote:%s\n", fs.srvProxy.GetDstAddr(DstIndex), localConn.RemoteAddr().String())
+		}
+		go fs.Forward(localConn, DstIndex)
+	    
 	case "Weight":
-
+		DstIndex := -1
+		
+		for k,Dst := range fs.srvProxy.DstList {			
+			if Dst.WeightCounter % Dst.Weight != 0 {
+				DstIndex = k
+				fs.srvProxy.DstList[k].WeightCounter++				
+				break				
+			}
+		}
+		//fmt.Printf("First DstIndex:%d\n",DstIndex)		
+		if DstIndex == -1 {
+			
+			for k,Dst := range fs.srvProxy.DstList {
+				if Dst.WeightCounter % Dst.Weight == 0 && DstIndex == -1 {
+					DstIndex = k					
+				}/* else {
+					fs.srvProxy.DstList[k].WeightCounter = 0
+				}	*/
+				fs.srvProxy.DstList[k].WeightCounter = 1
+				
+				//fmt.Printf("Name:%s Weight:%v WeightCounter:%v DstIndex:%d\n",Dst.Name,Dst.Weight,Dst.WeightCounter,DstIndex)
+			}		
+		}
+		//fmt.Printf("Final DstIndex:%d\n",DstIndex)
+		DstIndex = fs.GetHealthNode(DstIndex)
+		fs.srvProxy.DstList[DstIndex].Counter++
+		if *configInfo.Debug {
+			fmt.Printf("DstAddr:%s Remote:%s\n", fs.srvProxy.GetDstAddr(DstIndex), localConn.RemoteAddr().String())
+		}
+		go fs.Forward(localConn, DstIndex)
+		
 	case "Source":
 		client := fs.GetClient(localConn.RemoteAddr().String())
 		if client == nil {
@@ -250,15 +287,14 @@ func (fs *ForwardServer) Stop() {
 	if fs.localListener != nil {
 		fs.localListener.Close()
 	}
-	//fmt.Printf("FS:%s ready to stop.%v\n",fs.srvProxy.Name,fs.Run)
 }
 
 func (fs *ForwardServer) Listen(srvProxy Proxy) {
+	
 	if *configInfo.Debug {
-		fmt.Printf("forwardServer connType:%s serverAddr:%s Type:%s\n", srvProxy.Mode, srvProxy.GetSrcAddr(), srvProxy.Type)
+		fmt.Printf("ForwardServer connType:%s serverAddr:%s Type:%s\n", srvProxy.Mode, srvProxy.GetSrcAddr(), srvProxy.Type)
 	}
-	//已經使用var 宣告則物件已建立,不需要再用new
-	//FS := new(ForwardServer)
+		
 	fs.ClientList = list.New()
 	fs.Run = true
 	fs.srvProxy = srvProxy
@@ -268,6 +304,18 @@ func (fs *ForwardServer) Listen(srvProxy Proxy) {
 	}
 	fs.srvProxy.DstLen = len(fs.srvProxy.DstList)
 	if fs.srvProxy.Mode == "tcp" || fs.srvProxy.Mode == "http" || fs.srvProxy.Mode == "health" {
+	
+		//Init
+		switch fs.srvProxy.Type {
+		case "Weight":			
+			for k,Dst := range fs.srvProxy.DstList {				
+				fs.srvProxy.DstList[k].Weight += 2					
+				fs.srvProxy.DstList[k].WeightCounter = 1
+				fmt.Printf("Name:%s Weight:%v WeightCounter:%v \n",Dst.Name,fs.srvProxy.DstList[k].Weight,fs.srvProxy.DstList[k].WeightCounter)
+			}
+			
+		}
+		
 		switch fs.srvProxy.Mode {
 		case "health":
 			go fs.Check()

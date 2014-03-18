@@ -15,7 +15,6 @@ var configInfo ConfigInfo
 var help *bool
 
 func main() {
-	//fmt.Printf("GoHAProxy version:%s\n",version)
 	configInfo.FileName = flag.String("config", "./config.json", "set config file path.")
 	configInfo.Debug = flag.Bool("debug", false, "show debug trace message.")
 	configInfo.Version = flag.Bool("version", false, "GoHAProxy version.")
@@ -36,16 +35,12 @@ func main() {
 	if *configInfo.Version {
 		fmt.Println("GoHAProxy Version", version)
 		os.Exit(0)
-	}
-
-	fmt.Printf("GoHAProxy FileName:%s\n", *configInfo.FileName)
-	
+	}	
 	ok,haConfig := loadConfigs()
 	if ok {			
 		for _, proxy := range haConfig.Configs.ProxyList {
 			FS := new(ForwardServer)
 			proxyServer.ServerList = append(proxyServer.ServerList, FS)
-			//proxyServer.ServerList[k] = FS
 			go FS.Listen(proxy)
 		}	
 	}
@@ -95,12 +90,8 @@ func configWatcher() {
 						fmt.Printf("Delete Proxy[%v]: %v\n", k, sProxy.srvProxy.Name)
 					}
 					sProxy.Stop()
-					//proxyServer.ServerList = append(proxyServer.ServerList[:k], proxyServer.ServerList[k+1:])
 					proxyServer.ServerList = proxyServer.ServerList[:k+copy(proxyServer.ServerList[k:], proxyServer.ServerList[k+1:])]
-					//proxyServer.ServerList = copy(proxyServer.ServerList[k:], proxyServer.ServerList[k+1:])
-	
-					//delete(proxyServer.ServerList, k)
-					//time.Sleep(1 * time.Second)
+
 				}
 			}
 	
@@ -119,8 +110,7 @@ func configWatcher() {
 				}
 				if newProxy {
 					FS := new(ForwardServer)
-					proxyServer.ServerList = append(proxyServer.ServerList, FS)
-					//proxyServer.ServerList[lastkey+1] = FS
+					proxyServer.ServerList = append(proxyServer.ServerList, FS)					
 					if *configInfo.Debug {
 						fmt.Printf("Add New Proxy: %v\n", proxy)
 					}
@@ -134,6 +124,7 @@ func configWatcher() {
 }
 
 func loadConfigs() (bool,HAConfig) {
+	fmt.Printf("GoHAProxy load config file:%s\n", *configInfo.FileName)
 	file, e := ioutil.ReadFile(*configInfo.FileName)
 	if e != nil {
 		fmt.Printf("Load GoHAProxy config error: %v\n", e)

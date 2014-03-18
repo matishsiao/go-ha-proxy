@@ -49,6 +49,7 @@ type DstConfig struct {
 	Dst         string
 	DstPort     string
 	Weight      int
+	WeightCounter      int
 	Check       bool
 	Health      bool
 	Counter     int
