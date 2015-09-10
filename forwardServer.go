@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 	"time"
+	"log"
 )
 
 
@@ -24,7 +25,10 @@ type Client struct {
 }
 
 func (fs *ForwardServer) CheckHealth(connType string, uri string) (bool, int) {
-	
+	if uri == "" {
+		log.Println("Check health failed:uri is empty.")
+		return false,0
+	}
 	conn, err := net.Dial(connType, uri)
 	errCode := 0
 
@@ -32,8 +36,8 @@ func (fs *ForwardServer) CheckHealth(connType string, uri string) (bool, int) {
 		errCode = 1
 		return false, errCode
 	}
-
-	defer conn.Close()
+	
+	
 
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 
@@ -60,6 +64,7 @@ func (fs *ForwardServer) CheckHealth(connType string, uri string) (bool, int) {
 		}
 		break
 	}
+	conn.Close()
 	return true, errCode
 }
 
