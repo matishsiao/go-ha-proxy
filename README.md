@@ -5,7 +5,7 @@
 
 version:0.0.2
 
-1.support tcp proxy and you can use roundrobin or source mode to HA.
+1.support TCP proxy and you can use round-robin or source mode to HA.
 
 2.health mode supported.
 
