@@ -1,5 +1,5 @@
 # Introduction:
-  This GoHAProxy is simple HAProxy by Golang.
+  This go-ha-proxy is simple reverse proxy using Golang.
   
 ## Version:
 
